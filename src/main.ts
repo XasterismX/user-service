@@ -1,14 +1,13 @@
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
 import {ConsoleLogger} from "@nestjs/common";
 import {ConfigService} from "@nestjs/config";
+import {AppModule} from "./app.module.js";
 
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule,{
     logger: new ConsoleLogger({
       colors: true,
-      json: true,
       timestamp: true,
       prefix: "APP",
       logLevels: ["log", "warn","error", "debug"]

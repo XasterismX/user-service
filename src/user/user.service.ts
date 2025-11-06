@@ -1,29 +1,96 @@
-import { Injectable } from '@nestjs/common';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
+import {HttpException, HttpStatus, Injectable, InternalServerErrorException, Logger} from '@nestjs/common';
+
 import {ConfigService} from "@nestjs/config";
+import {UpdateUserDto} from "./dto/update-user.dto.js";
+import {CreateUserDto} from "./dto/create-user.dto.js";
+import {User} from "./entities/user.entity.js";
+import {InjectRepository} from "@nestjs/typeorm";
+import {Repository} from "typeorm";
+import {AuthService} from "../auth/auth.service.js";
 
 @Injectable()
 export class UserService {
-  constructor(private readonly cfgService: ConfigService) {
+  private readonly logger = new Logger(UserService.name);
+  constructor(private readonly cfgService: ConfigService,
+              @InjectRepository(User) private readonly userRepository: Repository<User>,
+              private readonly authService: AuthService,
+  ) {
   }
-  create(createUserDto: CreateUserDto) {
-    return 'This action adds a new user';
+  async create(createUserDto: CreateUserDto): Promise<{
+    user: User;
+    access_token: string;
+  }> {
+    try {
+      const existedUser = await this.userRepository.findOne({ where: { email: createUserDto.email } });
+      if (existedUser) {
+        throw new HttpException("User already exists", HttpStatus.BAD_REQUEST)
+      }
+      const token = await this.authService.createToken(createUserDto.email, createUserDto.age)
+      const user = await this.userRepository.save({email: createUserDto.email, age: createUserDto.age, password: createUserDto.password})
+      return {
+        user: user,
+        access_token: token.access_token,
+    }
+    }catch(err) {
+
+      this.logger.error(err.message)
+      throw new InternalServerErrorException(err.message)
+    }
+
   }
 
-  findAll() {
-    return `This action returns all user`;
+  async findAll(): Promise<User[]> {
+    try {
+      return await this.userRepository.find()
+    }catch(err) {
+      this.logger.error(err.message)
+      throw new InternalServerErrorException(err.message)
+    }
+
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} user`;
+  async findOne(id: string): Promise<User> {
+    try {
+      const user = await this.userRepository.findOne({ where: { id: id } })
+      if (!user) {
+        throw new HttpException("User not found", HttpStatus.NOT_FOUND)
+      }
+      return user
+
+
+    }catch (err) {
+      this.logger.error(err.message)
+      throw new InternalServerErrorException(err.message)
+    }
   }
 
-  update(id: number, updateUserDto: UpdateUserDto) {
-    return `This action updates a #${id} user`;
+  async update(id: string, updateUserDto: UpdateUserDto) {
+    try {
+      const existedUser = await this.findOne(id)
+      if (!existedUser) {
+        throw new HttpException("User not found", HttpStatus.NOT_FOUND)
+      }
+      const updateUser = await this.userRepository.merge(existedUser, updateUserDto)
+      await this.userRepository.save(updateUser)
+    }catch (err) {
+      this.logger.error(err.message)
+      throw new InternalServerErrorException(err.message)
+    }
+
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} user`;
+  async remove(id: string): Promise<boolean> {
+    try {
+      const existedUser = await this.findOne(id)
+      if (!existedUser) {
+    return false
+      }
+      const deletedUser = await this.userRepository.delete(id)
+      return true
+
+    }catch (err) {
+      this.logger.error(err.message)
+      throw new InternalServerErrorException(err.message)
+    }
   }
 }
