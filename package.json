@@ -5,6 +5,7 @@
   "author": "",
   "private": true,
   "license": "UNLICENSED",
+  "type": "module",
   "scripts": {
     "typeorm:generate": "npx typeorm-ts-node-esm migration:generate -d src/database.config.ts",
     "typeorm:migrate": "npx typeorm-ts-node-esm migration:run -d src/database.config.ts",
