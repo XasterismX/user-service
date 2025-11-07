@@ -7,6 +7,8 @@ import {User} from "./entities/user.entity.js";
 import {InjectRepository} from "@nestjs/typeorm";
 import {Repository} from "typeorm";
 import {AuthService} from "../auth/auth.service.js";
+import * as bcrypt from 'bcrypt';
+
 
 @Injectable()
 export class UserService {
@@ -25,8 +27,9 @@ export class UserService {
       if (existedUser) {
         throw new HttpException("User already exists", HttpStatus.BAD_REQUEST)
       }
+      const hash = await bcrypt.hash(createUserDto.password, 10);
       const token = await this.authService.createToken(createUserDto.email, createUserDto.age)
-      const user = await this.userRepository.save({email: createUserDto.email, age: createUserDto.age, password: createUserDto.password})
+      const user = await this.userRepository.save({email: createUserDto.email, age: createUserDto.age, password: hash})
       return {
         user: user,
         access_token: token.access_token,
@@ -34,7 +37,7 @@ export class UserService {
     }catch(err) {
 
       this.logger.error(err.message)
-      throw new InternalServerErrorException(err.message)
+      throw new HttpException(err.message, HttpStatus.INTERNAL_SERVER_ERROR)
     }
 
   }
@@ -69,6 +72,9 @@ export class UserService {
       const existedUser = await this.findOne(id)
       if (!existedUser) {
         throw new HttpException("User not found", HttpStatus.NOT_FOUND)
+      }
+      if (updateUserDto.password){
+        updateUserDto.password = await bcrypt.hash(updateUserDto.password, 10)
       }
       const updateUser = await this.userRepository.merge(existedUser, updateUserDto)
       await this.userRepository.save(updateUser)

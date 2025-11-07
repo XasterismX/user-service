@@ -8,7 +8,7 @@ import {
   UsePipes,
   ValidationPipe,
   Request,
-  UseGuards
+  UseGuards, Param
 } from '@nestjs/common';
 import {UserService} from "./user.service.js";
 import {CreateUserDto} from "./dto/create-user.dto.js";
@@ -21,38 +21,35 @@ export class UserController {
   constructor(private readonly userService: UserService ) {}
 
   @Post()
-  async create(@Body() createUserDto: CreateUserDto): Promise<string> {
+  async create(@Body() createUserDto: CreateUserDto): Promise<any> {
     const data = await this.userService.create(createUserDto)
 
-    return data.access_token;
+    return data;
   }
 
-  @Get("/all")
+  @Get("")
   @UsePipes(new ValidationPipe())
   findAll() {
     return this.userService.findAll();
   }
 
   @UseGuards(AuthGuard)
-  @Get()
+  @Get(":id")
   @UsePipes(new ValidationPipe())
-  findOne(@Request() req) {
-    const {id} = req.user
+  findOne(@Param('id') id: string) {
     return this.userService.findOne(id);
   }
 
-  @Patch()
+  @Patch(":id")
   @UsePipes(new ValidationPipe())
   @UseGuards(AuthGuard)
-  async update(@Request() req, @Body() updateUserDto: UpdateUserDto) {
+  async update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
 
-    const {id} = req.user
     return this.userService.update(id, updateUserDto);
   }
   @UseGuards(AuthGuard)
-  @Delete()
-  remove(@Request() req) {
-    const {id} = req.user
+  @Delete(":id")
+  remove(@Param('id') id: string) {
     return this.userService.remove(id);
   }
 }

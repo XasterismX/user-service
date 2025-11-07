@@ -21,6 +21,7 @@ import Joi from 'joi';
       DB_SYNCH: Joi.string().default('false'),
       DB_LOG: Joi.string().default('false'),
     }),
+    envFilePath: ["../src/.dev.env"],
     validationOptions: { abortEarly: true },
     isGlobal: true,
   }),
